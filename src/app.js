@@ -19,6 +19,7 @@ console.log("✅ Firebase Admin SDK initialized");
 const authRoutes = require("./routes/auth.routes");
 const maintenanceTeamRoutes = require("./routes/maintenanceTeam.routes");
 const notificationRoutes = require("./routes/notification");
+const NotificationService = require("./services/notificationService");
 
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
