@@ -1,0 +1,22 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+src/config/service.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Optional: build folders (if you use any)
+dist/
+build/
+
+# Optional: package lock if you want to ignore it
+# package-lock.json
