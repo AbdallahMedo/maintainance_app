@@ -3,7 +3,7 @@ node_modules/
 
 # Environment variables
 .env
-src/config/service.json
+# src/config/service.json
 
 # Logs
 npm-debug.log*
