@@ -23,21 +23,21 @@ const DeviceToken = sequelize.define('DeviceToken', {
     allowNull: false,
     unique: true
   },
-deviceInfo: {
-  type: DataTypes.TEXT('nvarchar'), // أو STRING('MAX')
-  allowNull: true,
-  field: 'device_info',
-  get() {
-    const rawValue = this.getDataValue('deviceInfo');
-    return rawValue ? JSON.parse(rawValue) : null;
+  deviceInfo: {
+    type: DataTypes.TEXT, // ✅ صحيح (يدعم Unicode تلقائياً في SQL Server)
+    allowNull: true,
+    field: 'device_info',
+    get() {
+      const rawValue = this.getDataValue('deviceInfo');
+      return rawValue ? JSON.parse(rawValue) : null;
+    },
+    set(value) {
+      this.setDataValue(
+        'deviceInfo',
+        value ? JSON.stringify(value) : null
+      );
+    }
   },
-  set(value) {
-    this.setDataValue(
-      'deviceInfo',
-      value ? JSON.stringify(value) : null
-    );
-  }
-},
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
@@ -57,7 +57,8 @@ deviceInfo: {
       fields: ['user_id', 'user_type']
     },
     {
-      fields: ['token']
+      fields: ['token'],
+      unique: true // ✅ إضافة unique index للـ token
     }
   ]
 });
