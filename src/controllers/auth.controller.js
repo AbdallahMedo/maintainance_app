@@ -157,13 +157,45 @@ exports.login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // ✅ **الجديد: طلب وحفظ FCM token إذا أُرسل**
+    const { fcmToken, deviceInfo } = req.body;
+    
+    if (fcmToken) {
+      console.log('🔔 FCM token received in login request');
+      console.log('   Token preview:', fcmToken.substring(0, 30) + '...');
+      
+      // تحديد userType بناءً على role
+      const userType = user.role === 'admin' || user.role === 'technician' 
+        ? user.role 
+        : 'client';
+      
+      try {
+        const result = await NotificationService.saveToken(
+          user.id,
+          userType,
+          fcmToken,
+          deviceInfo
+        );
+        
+        if (result.success) {
+          console.log('✅ FCM token saved successfully during login');
+        } else {
+          console.log('⚠️ Could not save FCM token:', result.error);
+        }
+      } catch (saveError) {
+        console.error('❌ Error saving FCM token during login:', saveError);
+        // لا نوقف عملية login إذا فشل حفظ token
+      }
+    }
+
     res.json({
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        authProvider: user.authProvider, // أضف هذا
+        authProvider: user.authProvider,
+        role: user.role
       },
     });
   } catch (err) {
@@ -172,10 +204,9 @@ exports.login = async (req, res) => {
   }
 };
 
-
 exports.googleLogin = async (req, res) => {
   try {
-    const { email, name } = req.body;
+    const { email, name, fcmToken, deviceInfo } = req.body;
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -198,13 +229,30 @@ exports.googleLogin = async (req, res) => {
         { expiresIn: "7d" }
       );
 
+      // ✅ **حفظ FCM token إذا أُرسل**
+      if (fcmToken) {
+        const userType = user.role === 'admin' || user.role === 'technician' 
+          ? user.role 
+          : 'client';
+        
+        await NotificationService.saveToken(
+          user.id,
+          userType,
+          fcmToken,
+          deviceInfo
+        ).catch(err => {
+          console.error('Error saving FCM token in Google login:', err);
+        });
+      }
+
       return res.json({
         token,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
-          authProvider: user.authProvider
+          authProvider: user.authProvider,
+          role: user.role
         }
       });
     }
@@ -216,7 +264,8 @@ exports.googleLogin = async (req, res) => {
       authProvider: 'google',
       emailVerified: true,
       password: 'GOOGLE_AUTH',
-      phone: null
+      phone: null,
+      role: 'client' // تحديد role افتراضي
     });
 
     const token = jwt.sign(
@@ -225,13 +274,26 @@ exports.googleLogin = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // ✅ **حفظ FCM token إذا أُرسل**
+    if (fcmToken) {
+      await NotificationService.saveToken(
+        user.id,
+        'client', // حساب جديد يكون client
+        fcmToken,
+        deviceInfo
+      ).catch(err => {
+        console.error('Error saving FCM token for new Google user:', err);
+      });
+    }
+
     res.json({
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        authProvider: user.authProvider
+        authProvider: user.authProvider,
+        role: 'client'
       }
     });
 
@@ -240,7 +302,6 @@ exports.googleLogin = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 exports.forgetPasswordEmail = async (req, res) => {
   try {
     const { email } = req.body;
