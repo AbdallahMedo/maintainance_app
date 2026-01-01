@@ -104,8 +104,35 @@ class NotificationService {
   /**
    * حفظ أو تحديث device token
    */
-  static async saveToken(userId, userType, token, deviceInfo = null) {
+static async saveToken(userId, userType, token, deviceInfo = null) {
     try {
+      // 🔍 **التحقق 1: التأكد أن التوكن ليس JWT**
+      if (this.isJwtToken(token)) {
+        console.error('❌ ERROR: This is a JWT authentication token, not FCM token!');
+        console.error('❌ Token preview:', token.substring(0, 50) + '...');
+        return { 
+          success: false, 
+          error: 'Invalid token type. Please send FCM registration token from Firebase Messaging, not authentication token.' 
+        };
+      }
+
+      // 🔍 **التحقق 2: التأكد أن التوكن هو FCM صالح**
+      if (!this.isValidFcmToken(token)) {
+        console.error('❌ ERROR: Invalid FCM token format');
+        console.error('❌ Token length:', token.length);
+        console.error('❌ Token starts with:', token.substring(0, 20));
+        return { 
+          success: false, 
+          error: 'Invalid FCM token format. Token should be a long string starting with letters/numbers.' 
+        };
+      }
+
+      // 🔍 **سجل التوكن الصحيح للتتبع**
+      console.log('✅ Valid FCM token detected:');
+      console.log('   - Length:', token.length);
+      console.log('   - Preview:', token.substring(0, 30) + '...');
+      console.log('   - For user:', userId, '(', userType, ')');
+
       const [deviceToken, created] = await DeviceToken.findOrCreate({
         where: { token },
         defaults: {
@@ -135,6 +162,116 @@ class NotificationService {
       return { success: false, error: error.message };
     }
   }
+
+  /**
+   * 🔍 **تحقق إذا كان التوكن JWT**
+   */
+  static isJwtToken(token) {
+    if (!token || typeof token !== 'string') return false;
+    
+    // JWT tokens لها 3 أجزاء مفصولة بنقطة: header.payload.signature
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    
+    // تبدأ عادة بـ eyJ (base64 encoded JSON)
+    if (!token.startsWith('eyJ')) return false;
+    
+    try {
+      // يمكننا فحص الـ header لنتأكد
+      const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+      return header && header.typ === 'JWT';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 🔍 **تحقق إذا كان التوكن FCM صالح**
+   */
+  static isValidFcmToken(token) {
+    if (!token || typeof token !== 'string') return false;
+    
+    // FCM tokens عادة:
+    // - طولها بين 100 و 400 حرف
+    // - تحتوي على أحرف وأرقام وشرطات
+    // - لا تحتوي على مسافات أو رموز غريبة
+    
+    const lengthOk = token.length > 100 && token.length < 500;
+    const formatOk = /^[A-Za-z0-9_-]+$/.test(token);
+    const notJwt = !this.isJwtToken(token);
+    
+    return lengthOk && formatOk && notJwt;
+  }
+
+  static async cleanupInvalidTokens() {
+  try {
+    console.log('🧹 Starting cleanup of invalid tokens...');
+    
+    const allTokens = await DeviceToken.findAll();
+    let deletedCount = 0;
+    let keptCount = 0;
+    
+    for (const tokenRecord of allTokens) {
+      const token = tokenRecord.token;
+      
+      if (this.isJwtToken(token) || !this.isValidFcmToken(token)) {
+        console.log(`🗑️ Deleting invalid token for user ${tokenRecord.userId}:`);
+        console.log(`   Type: ${this.isJwtToken(token) ? 'JWT token' : 'Invalid format'}`);
+        console.log(`   Preview: ${token.substring(0, 50)}...`);
+        
+        await tokenRecord.destroy();
+        deletedCount++;
+      } else {
+        keptCount++;
+      }
+    }
+    
+    console.log(`✅ Cleanup completed:`);
+    console.log(`   - Deleted: ${deletedCount} invalid tokens`);
+    console.log(`   - Kept: ${keptCount} valid tokens`);
+    
+    return { 
+      success: true, 
+      deletedCount, 
+      keptCount 
+    };
+    
+  } catch (error) {
+    console.error('❌ Cleanup error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * عرض توكنات المستخدم للتصحيح
+ */
+static async debugUserTokens(userId, userType) {
+  try {
+    const tokens = await DeviceToken.findAll({
+      where: {
+        userId,
+        userType,
+        isActive: true
+      }
+    });
+    
+    const formatted = tokens.map(t => ({
+      id: t.id,
+      token: t.token,
+      preview: t.token.substring(0, 30) + '...',
+      length: t.token.length,
+      isValidFcm: this.isValidFcmToken(t.token),
+      isJwt: this.isJwtToken(t.token),
+      deviceInfo: t.deviceInfo,
+      lastUsed: t.lastUsedAt
+    }));
+    
+    return { success: true, tokens: formatted };
+  } catch (error) {
+    console.error('Debug error:', error);
+    return { success: false, error: error.message };
+  }
+}
 
   /**
    * حذف device token (عند Logout)

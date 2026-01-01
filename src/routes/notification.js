@@ -94,4 +94,38 @@ router.post('/test', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/cleanup', authMiddleware, async (req, res) => {
+  // تأكد أن المستخدم admin
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+  
+  try {
+    const result = await NotificationService.cleanupInvalidTokens();
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/notifications/debug/:userId
+ * عرض توكنات مستخدم معين للتصحيح
+ */
+router.get('/debug/:userId', authMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const userType = req.user.role === 'admin' || req.user.role === 'technician' 
+      ? req.user.role 
+      : 'client';
+    
+    const result = await NotificationService.debugUserTokens(userId, userType);
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 module.exports = router;

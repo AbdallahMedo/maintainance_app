@@ -58,7 +58,7 @@ const DeviceToken = sequelize.define('DeviceToken', {
     },
     {
       fields: ['token'],
-      unique: true // ✅ إضافة unique index للـ token
+      unique: true
     }
   ]
 });
