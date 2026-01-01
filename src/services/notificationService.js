@@ -36,8 +36,16 @@ class NotificationService {
         };
         
         return admin.messaging().send(message)
-          .then(() => ({ success: true, token }))
-          .catch(error => ({ success: false, token, error }));
+          .then(() => {
+            console.log(`✅ Notification sent successfully to token: ${token.substring(0, 20)}...`);
+            return { success: true, token };
+          })
+          .catch(error => {
+            console.error(`❌ Failed to send to token: ${token.substring(0, 20)}...`);
+            console.error(`Error code: ${error.code}`);
+            console.error(`Error message: ${error.message}`);
+            return { success: false, token, error };
+          });
       });
 
       const results = await Promise.all(promises);
