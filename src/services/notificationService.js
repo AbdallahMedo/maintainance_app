@@ -2,12 +2,6 @@
 const admin = require('firebase-admin');
 const DeviceToken = require('../models/deviceToken');
 
-// Initialize Firebase Admin (قم بهذا مرة واحدة في app.js)
-// const serviceAccount = require('../path-to-your-firebase-adminsdk.json');
-// admin.initializeApp({
-//   credential: admin.credential.cert(serviceAccount)
-// });
-
 class NotificationService {
   /**
    * إرسال إشعار لمستخدم واحد
@@ -30,27 +24,53 @@ class NotificationService {
 
       const tokenStrings = tokens.map(t => t.token);
       
-      const message = {
-        notification: {
-          title: notification.title,
-          body: notification.body
-        },
-        data: notification.data || {},
-        tokens: tokenStrings
-      };
+      // ✅ الحل: استخدام send() لكل token بدلاً من sendMulticast
+      const promises = tokenStrings.map(token => {
+        const message = {
+          notification: {
+            title: notification.title,
+            body: notification.body
+          },
+          data: notification.data || {},
+          token: token // ⚠️ لاحظ: token مفرد وليس tokens
+        };
+        
+        return admin.messaging().send(message)
+          .then(() => ({ success: true, token }))
+          .catch(error => ({ success: false, token, error }));
+      });
 
-      // إرسال الإشعار
-      const response = await admin.messaging().sendMulticast(message);
+      const results = await Promise.all(promises);
+      
+      // حساب النجاح والفشل
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.filter(r => !r.success).length;
+      
+      // حذف الـ tokens الفاشلة
+      const failedTokens = results
+        .filter(r => !r.success)
+        .filter(r => {
+          const errorCode = r.error?.code;
+          return (
+            errorCode === 'messaging/invalid-registration-token' ||
+            errorCode === 'messaging/registration-token-not-registered'
+          );
+        })
+        .map(r => r.token);
 
-      // تحديث أو حذف tokens الفاشلة
-      await this.handleFailedTokens(response, tokens);
+      if (failedTokens.length > 0) {
+        await DeviceToken.destroy({
+          where: { token: failedTokens }
+        });
+        console.log(`🗑️ Removed ${failedTokens.length} invalid tokens`);
+      }
 
-      console.log(`✅ Sent notification to user ${userId}: ${response.successCount}/${tokenStrings.length} successful`);
+      console.log(`✅ Sent notification to user ${userId}: ${successCount}/${tokenStrings.length} successful`);
       
       return {
-        success: true,
-        successCount: response.successCount,
-        failureCount: response.failureCount
+        success: successCount > 0,
+        successCount,
+        failureCount
       };
 
     } catch (error) {
@@ -74,35 +94,6 @@ class NotificationService {
   }
 
   /**
-   * حذف أو تعطيل الـ tokens الفاشلة
-   */
-  static async handleFailedTokens(response, tokens) {
-    const failedTokens = [];
-    
-    response.responses.forEach((resp, idx) => {
-      if (!resp.success) {
-        const errorCode = resp.error?.code;
-        
-        // إذا كان الـ token غير صالح أو منتهي، قم بحذفه
-        if (
-          errorCode === 'messaging/invalid-registration-token' ||
-          errorCode === 'messaging/registration-token-not-registered'
-        ) {
-          failedTokens.push(tokens[idx].token);
-        }
-      }
-    });
-
-    // حذف الـ tokens الفاشلة
-    if (failedTokens.length > 0) {
-      await DeviceToken.destroy({
-        where: { token: failedTokens }
-      });
-      console.log(`🗑️ Removed ${failedTokens.length} invalid tokens`);
-    }
-  }
-
-  /**
    * حفظ أو تحديث device token
    */
   static async saveToken(userId, userType, token, deviceInfo = null) {
@@ -119,7 +110,6 @@ class NotificationService {
       });
 
       if (!created) {
-        // تحديث البيانات إذا كان الـ token موجود مسبقاً
         await deviceToken.update({
           userId,
           userType,
@@ -160,7 +150,6 @@ class NotificationService {
    * إشعار للأدمن عند إنشاء طلب صيانة جديد
    */
   static async notifyAdminNewRequest(ticketNumber, clientName) {
-    // جلب جميع الأدمن
     const MaintenanceTeam = require('../models/maintenanceTeam');
     const admins = await MaintenanceTeam.findAll({
       where: { role: 'admin' },

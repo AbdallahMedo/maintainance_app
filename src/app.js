@@ -14,17 +14,13 @@ admin.initializeApp({
 });
 
 console.log("✅ Firebase Admin SDK initialized");
-
-// Routes
 const authRoutes = require("./routes/auth.routes");
 const maintenanceTeamRoutes = require("./routes/maintenanceTeam.routes");
 const notificationRoutes = require("./routes/notification");
 const NotificationService = require("./services/notificationService");
-
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
 app.use("/api/auth", authRoutes);
 app.use("/api/maintenance-team", maintenanceTeamRoutes);
 app.use("/api/notifications", notificationRoutes);
