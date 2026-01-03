@@ -104,59 +104,62 @@ class NotificationService {
   /**
    * حفظ أو تحديث device token
    */
-  static async saveToken(userId, userType, fcmToken, deviceInfo) {
-    try {
-      // التحقق من أن التوكن هو FCM token وليس JWT
-      if (!fcmToken || fcmToken.length < 100) {
-        return {
-          success: false,
-          error: 'Invalid token type. Please send FCM registration token from Firebase Messaging, not authentication token.'
-        };
-      }
-
-      // التحقق من تنسيق FCM token (يبدأ عادة بـ 'f' أو 'c' أو 'd')
-      if (!this.isValidFCMToken(fcmToken)) {
-        return {
-          success: false,
-          error: 'Invalid FCM token format.'
-        };
-      }
-
-      // التحقق إذا كان التوكن موجود مسبقاً
-      const existingToken = await DeviceToken.findOne({
-        where: {
-          userId,
-          userType,
-          token: fcmToken
-        }
-      });
-
-      if (existingToken) {
-        // تحديث تاريخ التعديل
-        await existingToken.update({
-          updatedAt: new Date(),
-          deviceInfo: deviceInfo || existingToken.deviceInfo
-        });
-        return { success: true, message: 'Token updated' };
-      }
-
-      // إنشاء توكن جديد
-      await DeviceToken.create({
-        userId,
-        userType,
-        token: fcmToken,
-        deviceInfo: deviceInfo || {},
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-
-      return { success: true, message: 'Token saved successfully' };
-
-    } catch (error) {
-      console.error('Error saving token:', error);
-      return { success: false, error: error.message };
+static async saveToken(userId, userType, fcmToken, deviceInfo) {
+  try {
+    // 1️⃣ validate token
+    if (!fcmToken || fcmToken.length < 100) {
+      return {
+        success: false,
+        error: 'Invalid FCM token'
+      };
     }
+
+    if (!this.isValidFCMToken(fcmToken)) {
+      return {
+        success: false,
+        error: 'Invalid FCM token format'
+      };
+    }
+
+    // 🔥 2️⃣ normalize role
+    const normalizedUserType = userType.toLowerCase();
+
+    // 🔥 3️⃣ token unique globally (مش per user)
+    const existingToken = await DeviceToken.findOne({
+      where: { token: fcmToken }
+    });
+
+    if (existingToken) {
+      // 🔥 4️⃣ update owner (important)
+      await existingToken.update({
+        userId,
+        userType: normalizedUserType,
+        deviceInfo: deviceInfo || existingToken.deviceInfo,
+        isActive: true,
+        lastUsedAt: new Date()
+      });
+
+      return { success: true, message: 'Token reassigned to user' };
+    }
+
+    // 🔥 5️⃣ create new token
+    await DeviceToken.create({
+      userId,
+      userType: normalizedUserType,
+      token: fcmToken,
+      deviceInfo: deviceInfo || {},
+      isActive: true,
+      lastUsedAt: new Date()
+    });
+
+    return { success: true, message: 'Token saved successfully' };
+
+  } catch (error) {
+    console.error('❌ Error saving token:', error);
+    return { success: false, error: error.message };
   }
+}
+
 
 
   /**

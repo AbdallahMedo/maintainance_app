@@ -13,11 +13,14 @@ const DeviceToken = sequelize.define('DeviceToken', {
     allowNull: false,
     field: 'user_id'
   },
-  userType: {
-    type: DataTypes.ENUM('client', 'technician', 'admin'),
-    allowNull: false,
-    field: 'user_type'
-  },
+userType: {
+  type: DataTypes.STRING,
+  allowNull: false,
+  field: 'user_type',
+  validate: {
+    isIn: [['admin', 'technician', 'client']]
+  }
+},
   token: {
     type: DataTypes.STRING(500),
     allowNull: false,
