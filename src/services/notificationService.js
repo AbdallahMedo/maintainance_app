@@ -104,64 +104,60 @@ class NotificationService {
   /**
    * حفظ أو تحديث device token
    */
-static async saveToken(userId, userType, token, deviceInfo = null) {
+  static async saveToken(userId, userType, fcmToken, deviceInfo) {
     try {
-      // 🔍 **التحقق 1: التأكد أن التوكن ليس JWT**
-      if (this.isJwtToken(token)) {
-        console.error('❌ ERROR: This is a JWT authentication token, not FCM token!');
-        console.error('❌ Token preview:', token.substring(0, 50) + '...');
-        return { 
-          success: false, 
-          error: 'Invalid token type. Please send FCM registration token from Firebase Messaging, not authentication token.' 
+      // التحقق من أن التوكن هو FCM token وليس JWT
+      if (!fcmToken || fcmToken.length < 100) {
+        return {
+          success: false,
+          error: 'Invalid token type. Please send FCM registration token from Firebase Messaging, not authentication token.'
         };
       }
 
-      // 🔍 **التحقق 2: التأكد أن التوكن هو FCM صالح**
-      if (!this.isValidFcmToken(token)) {
-        console.error('❌ ERROR: Invalid FCM token format');
-        console.error('❌ Token length:', token.length);
-        console.error('❌ Token starts with:', token.substring(0, 20));
-        return { 
-          success: false, 
-          error: 'Invalid FCM token format. Token should be a long string starting with letters/numbers.' 
+      // التحقق من تنسيق FCM token (يبدأ عادة بـ 'f' أو 'c' أو 'd')
+      if (!this.isValidFCMToken(fcmToken)) {
+        return {
+          success: false,
+          error: 'Invalid FCM token format.'
         };
       }
 
-      // 🔍 **سجل التوكن الصحيح للتتبع**
-      console.log('✅ Valid FCM token detected:');
-      console.log('   - Length:', token.length);
-      console.log('   - Preview:', token.substring(0, 30) + '...');
-      console.log('   - For user:', userId, '(', userType, ')');
-
-      const [deviceToken, created] = await DeviceToken.findOrCreate({
-        where: { token },
-        defaults: {
+      // التحقق إذا كان التوكن موجود مسبقاً
+      const existingToken = await DeviceToken.findOne({
+        where: {
           userId,
           userType,
-          deviceInfo,
-          isActive: true,
-          lastUsedAt: new Date()
+          token: fcmToken
         }
       });
 
-      if (!created) {
-        await deviceToken.update({
-          userId,
-          userType,
-          deviceInfo,
-          isActive: true,
-          lastUsedAt: new Date()
+      if (existingToken) {
+        // تحديث تاريخ التعديل
+        await existingToken.update({
+          updatedAt: new Date(),
+          deviceInfo: deviceInfo || existingToken.deviceInfo
         });
+        return { success: true, message: 'Token updated' };
       }
 
-      console.log(`✅ Token saved for user ${userId} (${userType})`);
-      return { success: true, deviceToken };
+      // إنشاء توكن جديد
+      await DeviceToken.create({
+        userId,
+        userType,
+        token: fcmToken,
+        deviceInfo: deviceInfo || {},
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      return { success: true, message: 'Token saved successfully' };
 
     } catch (error) {
       console.error('Error saving token:', error);
       return { success: false, error: error.message };
     }
   }
+
 
   /**
    * 🔍 **تحقق إذا كان التوكن JWT**
@@ -188,20 +184,17 @@ static async saveToken(userId, userType, token, deviceInfo = null) {
   /**
    * 🔍 **تحقق إذا كان التوكن FCM صالح**
    */
-  static isValidFcmToken(token) {
+  static isValidFCMToken(token) {
+    // FCM tokens عادة ما تكون طويلة (150-250 حرف)
     if (!token || typeof token !== 'string') return false;
     
-    // FCM tokens عادة:
-    // - طولها بين 100 و 400 حرف
-    // - تحتوي على أحرف وأرقام وشرطات
-    // - لا تحتوي على مسافات أو رموز غريبة
+    // FCM token يبدأ عادة بأحد هذه البادئات
+    const validPrefixes = ['f', 'c', 'd', 'e'];
+    const prefix = token[0];
     
-    const lengthOk = token.length > 100 && token.length < 500;
-    const formatOk = /^[A-Za-z0-9_-]+$/.test(token);
-    const notJwt = !this.isJwtToken(token);
-    
-    return lengthOk && formatOk && notJwt;
+    return validPrefixes.includes(prefix) && token.length > 100;
   }
+
 
   static async cleanupInvalidTokens() {
   try {
