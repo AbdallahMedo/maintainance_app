@@ -6,12 +6,13 @@ const MaintenanceTeam = require('../models/maintenanceTeam');
 // ========================= Login =========================
 exports.login = async (req, res) => {
   try {
-    const { emailOrPhone, password } = req.body;
+    const { emailOrPhone, password, fcmToken, deviceInfo } = req.body;
 
     if (!emailOrPhone || !password) {
       return res.status(400).json({ message: 'Email/Phone and password are required' });
     }
 
+    // 1️⃣ البحث عن المستخدم
     const user = await MaintenanceTeam.findOne({
       where: {
         [Sequelize.Op.or]: [
@@ -21,13 +22,48 @@ exports.login = async (req, res) => {
       }
     });
 
-    if (!user) return res.status(401).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
 
+    // 2️⃣ التحقق من الباسورد
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: 'Wrong credentials' });
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Wrong credentials' });
+    }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    // 3️⃣ إنشاء JWT Token
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
+    // 4️⃣ حفظ FCM Token إذا موجود
+    if (fcmToken) {
+      console.log('🔔 FCM token received in maintenance team login');
+      console.log('   User:', user.name, '(', user.role, ')');
+      console.log('   Token length:', fcmToken.length);
+      
+      try {
+        const result = await NotificationService.saveToken(
+          user.id,
+          user.role, // admin أو technician
+          fcmToken,
+          deviceInfo
+        );
+        
+        if (result.success) {
+          console.log('✅ FCM token saved for maintenance team member');
+        } else {
+          console.log('⚠️ Could not save FCM token:', result.error);
+        }
+      } catch (saveError) {
+        console.error('❌ Error saving FCM token:', saveError);
+      }
+    }
+
+    // 5️⃣ إرجاع البيانات
     res.json({
       token,
       user: {
@@ -40,11 +76,10 @@ exports.login = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('❌ Maintenance team login error:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 // ========================= Add User =========================
 exports.addUser = async (req, res) => {
   try {
