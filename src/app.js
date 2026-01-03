@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const admin = require("firebase-admin");
+const notificationApiRoutes = require("./routes/notificationApi");
 require("dotenv").config();
 
 // ✅ تهيئة Firebase بـ 3 طرق مختلفة
@@ -67,6 +68,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/maintenance-team", maintenanceTeamRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/notifications", notificationApiRoutes);
 
 // ✅ Health check endpoint للتأكد من Firebase
 app.get("/api/health", async (req, res) => {
