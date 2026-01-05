@@ -160,6 +160,40 @@ router.post('/client/rating-request', async (req, res) => {
   }
 });
 
+router.post('/client/cancelled-request', async (req, res) => {
+  try {
+    const { ticketNumber, clientName, technicianId } = req.body;
+
+    if (!ticketNumber || !clientName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: ticketNumber, clientName'
+      });
+    }
+
+    const result = await NotificationService.notifyRequestCancelledByClient(
+      ticketNumber,
+      clientName,
+      technicianId
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Notifications sent for cancelled request',
+      result
+    });
+  } catch (error) {
+    console.error('Error in cancelled-request notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;
+
 /**
  * POST /api/notifications/technician/rating-received
  * إشعار للفني عند استلام تقييم

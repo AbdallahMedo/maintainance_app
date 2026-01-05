@@ -390,6 +390,46 @@ static async debugUserTokens(userId, userType) {
   /**
    * إشعار للأدمن عند إغلاق الطلب
    */
+static async notifyRequestCancelledByClient(ticketNumber, clientName, technicianId) {
+    const MaintenanceTeam = require('../models/maintenanceTeam');
+    
+    // جلب جميع الأدمن
+    const admins = await MaintenanceTeam.findAll({
+      where: { role: 'admin' },
+      attributes: ['id']
+    });
+
+    // إعداد الإشعار
+    const notification = {
+      title: '🚫 العميل ألغى الطلب',
+      body: `العميل ${clientName} ألغى الطلب #${ticketNumber}`,
+      data: {
+        type: 'cancelled_by_client',
+        ticketNumber,
+        clientName,
+        screen: 'RequestDetails'
+      }
+    };
+
+    const usersToNotify = [];
+
+    // إضافة الأدمن
+    usersToNotify.push(...admins.map(admin => ({
+      userId: admin.id,
+      userType: 'admin'
+    })));
+
+    // إضافة الفني إذا كان موجوداً
+    if (technicianId) {
+      usersToNotify.push({
+        userId: technicianId,
+        userType: 'technician'
+      });
+    }
+
+    return await this.sendToMultipleUsers(usersToNotify, notification);
+  }
+
   static async notifyAdminRequestClosed(ticketNumber, status, technicianName) {
     const MaintenanceTeam = require('../models/maintenanceTeam');
     const admins = await MaintenanceTeam.findAll({
@@ -419,6 +459,8 @@ static async debugUserTokens(userId, userType) {
 
     return await this.sendToMultipleUsers(users, notification);
   }
+
+
 
   /**
    * إشعار للعميل بطلب التقييم
