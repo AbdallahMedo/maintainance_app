@@ -340,7 +340,7 @@ static async debugUserTokens(userId, userType) {
   static async notifyClientRequestAssigned(clientId, ticketNumber, technicianName) {
     const notification = {
       title: '✅ تم إسناد طلبك',
-      body: `تم إسناد طلب #${ticketNumber} للفني ${technicianName}`,
+      body: `تم إسناد طلب #${ticketNumber} لمسؤول الصيلنه : ${technicianName}`,
       data: {
         type: 'assigned_to_technician',
         ticketNumber,
@@ -357,8 +357,8 @@ static async debugUserTokens(userId, userType) {
    */
   static async notifyClientStatusUpdate(clientId, ticketNumber, status, technicianName) {
     const statusMessages = {
-      on_way: `الفني ${technicianName} في الطريق إليك`,
-      arrived: `الفني ${technicianName} وصل إلى الموقع`,
+      on_way: `مسؤول الصيانه ${technicianName} في الطريق إليك`,
+      arrived: `مسؤول الصيانه ${technicianName} وصل إلى الموقع`,
       solved: `تم حل المشكلة بنجاح ✅`,
       not_solved: `لم يتم حل المشكلة`,
       canceled: `تم إلغاء الطلب`
