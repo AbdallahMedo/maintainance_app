@@ -1,5 +1,4 @@
-const { Resend } = require("resend");
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = require("../config/mail");
 
 const sendEmail = async (to, link, type = "reset") => {
   const emailConfigs = {
@@ -18,6 +17,7 @@ const sendEmail = async (to, link, type = "reset") => {
       footerNote: "If you did not request a password reset, please ignore this email. Your password will remain unchanged."
     }
   };
+
   const config = emailConfigs[type];
 
   await transporter.sendMail({
