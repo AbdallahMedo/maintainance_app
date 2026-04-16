@@ -340,7 +340,7 @@ static async debugUserTokens(userId, userType) {
   static async notifyClientRequestAssigned(clientId, ticketNumber, technicianName) {
     const notification = {
       title: '✅ تم إسناد طلبك',
-      body: `تم إسناد طلب #${ticketNumber} لمسؤول الصيلنه : ${technicianName}`,
+      body: `تم إسناد طلب #${ticketNumber} لمسؤول الصيانه : ${technicianName}`,
       data: {
         type: 'assigned_to_technician',
         ticketNumber,
