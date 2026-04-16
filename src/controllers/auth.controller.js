@@ -711,7 +711,7 @@ exports.resetPasswordEmail = async (req, res) => {
             <strong>✓</strong> You can now log in with your new credentials
           </div>
           <p>You can now close this window and log in to your account using your new password.</p>
-          <a href="${process.env.BASE_URL || 'http://localhost:3000'}">Return to Login</a>
+          // <a href="${process.env.BASE_URL || 'http://localhost:3000'}">Return to Login</a>
         </div>
         
         <script>
