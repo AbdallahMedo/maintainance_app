@@ -238,3 +238,30 @@ exports.getUserById = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+//================== Delete User ==================================
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await MaintenanceTeam.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    await user.destroy();
+
+    res.json({
+      message: 'User deleted successfully'
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: 'Internal server error'
+    });
+  }
+};
