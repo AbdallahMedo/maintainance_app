@@ -11,5 +11,6 @@ router.get('/', maintenanceTeamController.getAllUsers);
 router.get('/:id', maintenanceTeamController.getUserById);
 router.put('/:id', maintenanceTeamController.updateUser);
 router.put('/:id/change-password', maintenanceTeamController.changePassword);
+router.delete('/:id', maintenanceTeamController.deleteUser);
 
 module.exports = router;
