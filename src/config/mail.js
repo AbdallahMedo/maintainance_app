@@ -1,9 +1,23 @@
 const nodemailer = require("nodemailer");
 
-module.exports = nodemailer.createTransport({
+console.log("=== MAIL CONFIG DEBUG ===");
+console.log("MAIL_USER:", process.env.MAIL_USER);
+console.log("MAIL_PASS exists:", !!process.env.MAIL_PASS);
+
+const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
+    pass: process.env.MAIL_PASS,
+  },
+});
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("SMTP VERIFY ERROR:", error);
+  } else {
+    console.log("SMTP SERVER READY");
   }
 });
+
+module.exports = transporter;
