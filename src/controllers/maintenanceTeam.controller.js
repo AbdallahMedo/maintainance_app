@@ -265,3 +265,32 @@ exports.deleteUser = async (req, res) => {
     });
   }
 };
+// ========================= Admin Reset Password =========================
+exports.adminResetPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ message: 'New password is required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await MaintenanceTeam.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await user.update({ password: hash });
+
+    res.json({ message: 'Password reset successfully' });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
