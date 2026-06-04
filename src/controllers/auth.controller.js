@@ -641,14 +641,15 @@ exports.renderResetPasswordPage = (req, res) => {
 <body>
 <div class="container">
   <div class="logo">
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <path d="M35 10 L35 35 L25 60 Q25 75 40 80 L60 80 Q75 75 75 60 L65 35 L65 10 Z" fill="url(#grad1)" stroke="#667eea" stroke-width="2"/>
+    <img href="https://www.google.com/imgres?q=chem%20tech&imgurl=http%3A%2F%2Fchemtech-eg.com%2Fwp-content%2Fuploads%2F2022%2F05%2Fcropped-logo-chem-tech.png&imgrefurl=https%3A%2F%2Fchemtech-eg.com%2F&docid=ynXDha4k9jVQ4M&tbnid=O2r5h6MirjrO9M&vet=12ahUKEwi6y-r0_-yUAxVi0QIHHWW7M3QQnPAOegQIGBAB..i&w=312&h=249&hcb=2&ved=2ahUKEwi6y-r0_-yUAxVi0QIHHWW7M3QQnPAOegQIGBAB" />
+    // <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    //   <defs>
+    //     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+    //       <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+    //       <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    //     </linearGradient>
+    //   </defs>
+    //   <path d="M35 10 L35 35 L25 60 Q25 75 40 80 L60 80 Q75 75 75 60 L65 35 L65 10 Z" fill="url(#grad1)" stroke="#667eea" stroke-width="2"/>
       <rect x="40" y="5" width="20" height="10" fill="#667eea" rx="2"/>
       <circle cx="45" cy="55" r="4" fill="white" opacity="0.7"/>
       <circle cx="55" cy="48" r="3" fill="white" opacity="0.7"/>
